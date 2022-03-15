@@ -1,117 +1,178 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
-
-    function Square(props){
-        return (
-            <button className="square" onClick={props.onClick}>
-                {props.value}
-            </button>
-        )
+  class CalculatorDisplay extends React.Component {
+    constructor(props){
+        super(props);
     }
-  
-  class Board extends React.Component {
 
-    renderSquare(i) {
-      return <Square 
-                value = {this.props.squares[i]}
-                onClick={()=> this.props.onClick(i)}
-            />;
-    }
-  
-    render() {  
+    render() {
       return (
-        <div>
-          <div className="board-row">
-            {this.renderSquare(0)}
-            {this.renderSquare(1)}
-            {this.renderSquare(2)}
-          </div>
-          <div className="board-row">
-            {this.renderSquare(3)}
-            {this.renderSquare(4)}
-            {this.renderSquare(5)}
-          </div>
-          <div className="board-row">
-            {this.renderSquare(6)}
-            {this.renderSquare(7)}
-            {this.renderSquare(8)}
-          </div>
+        <div className="calculator-display">
+          <input type="text" readOnly value = {this.props.value} maxLength="27"/>
         </div>
       );
     }
   }
-  
-  class Game extends React.Component {
-      constructor(props){
-          super(props);
-          this.state = {
-              history: [ {
-                  squares: Array(9).fill(null),
-              }],
-              xIsNext: true,
-              stepNumber : 0,
-          }
-      }
-    handleClick(i){
-        const history = this.state.history.slice(0,this.state.stepNumber + 1);
-        const current = history[history.length - 1];
-        const squares = current.squares.slice();
-        if (calculateWinner(squares) || squares[i]){
-            return;
-        }
-        squares[i] = this.state.xIsNext ? 'X' : 'O';
-        this.setState({
-            history : history.concat([ {
-                squares : squares
-            }]),
-            stepNumber: history.length,
-            xIsNext: !this.state.xIsNext,
-        });
+  class CalculatorButtons extends React.Component {
+    constructor(props){
+        super(props);
     }
-
-    jumpTo(step){
-        this.setState({
-            stepNumber: step,
-            xIsNext: (step % 2) === 0,
-        })
+    renderNumberButton(i){
+      return  <button onClick={()=>{this.props.onClick("number",i)}}> 
+                {i}
+              </button>
+    }
+    renderFunctionButton(i){
+      return <button onClick={()=>{this.props.onClick("function",i)}}> 
+              {i}
+            </button>
     }
 
     render() {
-        const history = this.state.history;
-        const current = history[this.state.stepNumber];
-        const winner = calculateWinner(current.squares);
+      return (
+        <div className="calculator-buttons">
+            {this.renderFunctionButton("%")}
+            {this.renderFunctionButton("CE")}
+            {this.renderFunctionButton("C")}
+            {this.renderFunctionButton("<--")}
 
-        const moves = history.map((step,move) => {
-            const desc = move ?
-                'Go to move #' + move:
-                'Go to game start';
-            return (
-                <li key = {move}>
-                    <button onClick = {() => this.jumpTo(move)}>{desc}</button>
-                </li>
-            );
-        });
+            {this.renderFunctionButton("1/x")}
+            {this.renderFunctionButton("x^2")}
+            {this.renderFunctionButton("sqrt(x)")}
+            {this.renderFunctionButton("/")}
 
-        let status;
-        if(winner){
-            status = 'Winner: ' +winner;
+            {this.renderNumberButton(7)}
+            {this.renderNumberButton(8)}
+            {this.renderNumberButton(9)}
+            {this.renderFunctionButton("*")}
+
+            {this.renderNumberButton(4)}
+            {this.renderNumberButton(5)}
+            {this.renderNumberButton(6)}
+            {this.renderFunctionButton("-")}
+
+            {this.renderNumberButton(1)}
+            {this.renderNumberButton(2)}
+            {this.renderNumberButton(3)}
+            {this.renderFunctionButton("+")}
+
+            {this.renderFunctionButton("+/-")}
+            {this.renderNumberButton(0)}
+            {this.renderNumberButton(".")}
+            {this.renderFunctionButton("=")}
+        </div>
+      );
+    }
+  }
+
+  class Calculator extends React.Component {
+      constructor(props){
+          super(props);
+          this.state = {
+            operations : ["0"],
+            isMultiple : false
+          }
+      }
+
+    updateDisplay(type, button){
+      const operations = this.state.operations.slice()
+      const current = operations[operations.length - 1];
+      const isMultiple = this.state.isMultiple;
+      if(type==="function"){
+        switch(button){
+          
+        }
+          if(button === "C"){
+            let newoperations = ["0"];
+            this.setState({
+              operations : newoperations
+            });
+          }
+          else if(button === "+/-"){
+            let newoperations = this.state.operations.slice(0, operations.length - 1);
+            if(current.charAt(0)==="-"){
+              newoperations.push(current.replace("-",""));
+            }
+            else{
+              newoperations.push("-"+current);
+            }
+            this.setState({
+              operations : newoperations,
+              isMultiple : false
+            });
+          }
+          else if(button === "+" || button === "-" || button === "*" || button === "/"){
+            let newoperations;
+            if(isMultiple){
+              newoperations = this.state.operations.slice(0, operations.length - 2);
+              newoperations.push(button);
+              newoperations.push("0");
+            }
+            else{
+              newoperations = this.state.operations.slice();
+              newoperations.push(button);
+              newoperations.push("0");
+            }
+            this.setState({
+              operations : newoperations,
+              isMultiple : true
+            });
+          }
+          else if(button === "="){
+            let newoperations;
+            let firstnumber = this.state.operations[operations.length - 3];
+            let secondnumber = this.state.operations[operations.length - 1];
+            let operation = this.state.operations[operations.length - 2];
+            let result;
+            if(operation === "+"){
+              result = parseFloat(firstnumber) + parseFloat(secondnumber);
+            }
+            else if(operation === "-"){
+              result = parseFloat(firstnumber) - parseFloat(secondnumber);
+            }
+            else if(operation === "*"){
+              result = parseFloat(firstnumber) * parseFloat(secondnumber);
+            }
+            else if(operation === "/"){
+              result = parseFloat(firstnumber) / parseFloat(secondnumber);
+            }
+            newoperations = this.state.operations.slice();
+            newoperations.push(result+"");
+            this.setState({
+              operations : newoperations,
+              isMultiple : false
+            });
+          }
+      }
+      else if(type == "number"){
+        let newtext;
+        if(current == "0"){
+          newtext  = button + ""
         }
         else{
-            status = 'Next player: ' + (this.state.xIsNext ? 'X' : 'O');
+          newtext = current + button + ""
         }
+        let newoperations = this.state.operations.slice(0, operations.length - 1);
+        newoperations.push(newtext);
+        this.setState({
+          operations : newoperations,
+          isMultiple : isMultiple
+        });
+      }
+    }
+    render() {
+      const operations = this.state.operations.slice()
+      const current = operations[operations.length - 1];
+      console.log(operations);
       return (
-        <div className="game">
-          <div className="game-board">
-            <Board
-                squares = {current.squares}
-                onClick = {(i) => this.handleClick(i)}
+        <div className="calculator">
+            <CalculatorDisplay 
+              value = {current} 
             />
-          </div>
-          <div className="game-info">
-            <div>{status}</div>
-            <ol>{moves}</ol>
-          </div>
+            <CalculatorButtons
+              onClick ={(type,action) => this.updateDisplay(type,action)}
+             />
         </div>
       );
     }
@@ -120,27 +181,6 @@ import './index.css';
   // ========================================
   
   ReactDOM.render(
-    <Game />,
+    <Calculator />,
     document.getElementById('root')
   );
-  
-
-  function calculateWinner(squares) {
-    const lines = [
-      [0, 1, 2],
-      [3, 4, 5],
-      [6, 7, 8],
-      [0, 3, 6],
-      [1, 4, 7],
-      [2, 5, 8],
-      [0, 4, 8],
-      [2, 4, 6],
-    ];
-    for (let i = 0; i < lines.length; i++) {
-      const [a, b, c] = lines[i];
-      if (squares[a] && squares[a] === squares[b] && squares[a] === squares[c]) {
-        return squares[a];
-      }
-    }
-    return null;
-  }
