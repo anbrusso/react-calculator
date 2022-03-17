@@ -19,12 +19,12 @@ import './index.css';
         super(props);
     }
     renderNumberButton(i){
-      return  <button onClick={()=>{this.props.onClick("number",i)}}> 
+      return  <button onClick={()=>{this.props.numberButton(i)}}> 
                 {i}
               </button>
     }
     renderFunctionButton(i){
-      return <button onClick={()=>{this.props.onClick("function",i)}}> 
+      return <button onClick={()=>{this.props.functionButton(i)}}> 
               {i}
             </button>
     }
@@ -71,107 +71,212 @@ import './index.css';
           super(props);
           this.state = {
             operations : ["0"],
-            isMultiple : false
+            isOperating : false
           }
       }
-
-    updateDisplay(type, button){
+    //perform the button press for a number
+    numberButton(button){
       const operations = this.state.operations.slice()
       const current = operations[operations.length - 1];
-      const isMultiple = this.state.isMultiple;
-      if(type==="function"){
-        switch(button){
-          
-        }
-          if(button === "C"){
-            let newoperations = ["0"];
-            this.setState({
-              operations : newoperations
-            });
-          }
-          else if(button === "+/-"){
-            let newoperations = this.state.operations.slice(0, operations.length - 1);
-            if(current.charAt(0)==="-"){
-              newoperations.push(current.replace("-",""));
-            }
-            else{
-              newoperations.push("-"+current);
-            }
-            this.setState({
-              operations : newoperations,
-              isMultiple : false
-            });
-          }
-          else if(button === "+" || button === "-" || button === "*" || button === "/"){
-            let newoperations;
-            if(isMultiple){
-              newoperations = this.state.operations.slice(0, operations.length - 2);
-              newoperations.push(button);
-              newoperations.push("0");
-            }
-            else{
-              newoperations = this.state.operations.slice();
-              newoperations.push(button);
-              newoperations.push("0");
-            }
-            this.setState({
-              operations : newoperations,
-              isMultiple : true
-            });
-          }
-          else if(button === "="){
-            let newoperations;
-            let firstnumber = this.state.operations[operations.length - 3];
-            let secondnumber = this.state.operations[operations.length - 1];
-            let operation = this.state.operations[operations.length - 2];
-            let result;
-            if(operation === "+"){
-              result = parseFloat(firstnumber) + parseFloat(secondnumber);
-            }
-            else if(operation === "-"){
-              result = parseFloat(firstnumber) - parseFloat(secondnumber);
-            }
-            else if(operation === "*"){
-              result = parseFloat(firstnumber) * parseFloat(secondnumber);
-            }
-            else if(operation === "/"){
-              result = parseFloat(firstnumber) / parseFloat(secondnumber);
-            }
-            newoperations = this.state.operations.slice();
-            newoperations.push(result+"");
-            this.setState({
-              operations : newoperations,
-              isMultiple : false
-            });
-          }
+      let isOperating = this.state.isOperating;
+      let newtext;
+      let newoperations
+      //if the current number is a zero, we replace it with a new number
+      if(current == "0"){
+        newtext  = button + ""
+        newoperations = this.state.operations.slice(0, operations.length - 1);
       }
-      else if(type == "number"){
-        let newtext;
-        if(current == "0"){
-          newtext  = button + ""
+      //there's already a number on the display.
+      else{
+        //when operator button is pressed, we replace the current display with a new number
+        //otherwise we are appending to what is displayed
+        if(isOperating){
+          newtext = button + "";
+          isOperating = false;
+          newoperations = this.state.operations.slice();
         }
         else{
+          //the decimal button is special, we don't want to add two of them
+          if(button == "." && current.includes(".")){
+            return;
+          }
           newtext = current + button + ""
+          newoperations = this.state.operations.slice(0, operations.length - 1);
         }
-        let newoperations = this.state.operations.slice(0, operations.length - 1);
-        newoperations.push(newtext);
-        this.setState({
-          operations : newoperations,
-          isMultiple : isMultiple
-        });
       }
+      newoperations.push(newtext);
+      this.setState({
+        operations : newoperations,
+        isOperating : isOperating
+      });
+    }
+    //given two string  numbers, performs the specified operation and returns the result.
+    doBinaryOperation(firstnumber,secondnumber,operation){
+      let result;
+      switch(operation){
+        case "+":
+          result = parseFloat(firstnumber) + parseFloat(secondnumber);
+          break;
+        case "*":
+          result = parseFloat(firstnumber) * parseFloat(secondnumber);
+          break;
+        case "-":
+          result = parseFloat(firstnumber) - parseFloat(secondnumber);
+          break;
+        case "/":
+          result = parseFloat(firstnumber) / parseFloat(secondnumber);
+          break;
+      }
+      return result;
+    }
+    //given a string  number, performs the specified operation and returns the result.
+    doUnaryOperation(number,operation){
+      let result;
+      switch(operation){
+        case "+/-":
+          result = -parseFloat(number);    
+          break;
+        case "x^2":
+          result = Math.pow(parseFloat(number), 2);     
+          break;
+        case "1/x":
+          result = 1/parseFloat(number);      
+          break;
+        case "sqrt(x)":
+          let float = parseFloat(number);
+          if(float > 0){
+            result = Math.sqrt(number);
+          }
+          else{
+            result = parseFloat(number);
+          }
+          break;
+      }
+      return result;
+    }
+    //perform the button press for a function button
+    functionButton(button){
+      const operations = this.state.operations.slice();
+      const current = operations[operations.length - 1];
+      let isOperating = this.state.isOperating;
+      let newoperations = operations.slice();
+      switch(button){
+        case "C":
+          //clear button resets the history completely
+          newoperations = ["0"];
+          break;
+        case "CE":
+          //clear entry button either sets the last number to zero, or if an operator is the last button pressed
+          //it will push a zero.
+          if(isOperating){
+            newoperations.push("0");
+            isOperating = false;
+          }
+          else{
+            newoperations = this.state.operations.slice(0, operations.length - 1);
+            newoperations.push("0");
+          }
+          break;
+        case "<--":
+          //backspace button only works when not operating, in which case it removes the last numbe entered.
+          //when there is only one number it replaces it with zero.
+          if(!isOperating){
+            let removed = current.slice(0,-1);
+            newoperations = this.state.operations.slice(0, operations.length - 1);
+            if(removed){
+              newoperations.push(removed);
+            }
+            else{
+              newoperations.push("0");
+            }
+          }
+          break;
+        //unary operators all are handled the same
+        case "+/-":
+        case "1/x":
+        case "x^2":
+        case "sqrt(x)":
+          let result;
+          let number;
+          //if an bianry operation is in progress, we clear it and use the number before it
+          if(isOperating){
+            number = this.state.operations[operations.length - 2];
+            newoperations = this.state.operations.slice(0, operations.length - 1);
+            isOperating = false;
+          }
+          else{
+            number =  this.state.operations[operations.length - 1];
+          }
+          result = this.doUnaryOperation(number,button);
+          newoperations.push(button);
+          newoperations.push(result+"");
+          break;
+        //binary operators all are handled the same.
+        case "+":
+        case "-":
+        case "*":
+        case "/":
+          //if a binary operator is already in progress, we just swithc operations, otherwise
+          //we add the operation to the operation list.
+          if(isOperating){
+            newoperations = this.state.operations.slice(0, operations.length - 1);
+            newoperations.push(button);
+          }
+          else{
+            newoperations = this.state.operations.slice();
+            newoperations.push(button);
+            isOperating = true;
+          }
+          break;
+        //equals button behavior varies considerably based on what was recently pressed.
+        //TODO: this behavior needs to be worked through more.
+        case "=":
+          if(isOperating){
+            let number = this.state.operations[operations.length - 2];
+            let operation = this.state.operations[operations.length - 1];
+            let result = this.doBinaryOperation(number,number,operation);
+            newoperations = this.state.operations.slice();
+            newoperations.push(number);
+            newoperations.push("=");
+            newoperations.push(result+"");
+            isOperating = false;
+          }
+          else{
+            let firstnumber = this.state.operations[operations.length - 3];
+            let operation = this.state.operations[operations.length - 2];
+            let secondnumber = this.state.operations[operations.length - 1];
+            let result = this.doBinaryOperation(firstnumber,secondnumber,operation);
+            newoperations = this.state.operations.slice();
+            newoperations.push("=");
+            newoperations.push(result+"");
+          }
+          break;
+      }
+      this.setState({
+        operations : newoperations,
+        isOperating : isOperating
+      });
     }
     render() {
-      const operations = this.state.operations.slice()
-      const current = operations[operations.length - 1];
+      const operations = this.state.operations;
+      const isOperating = this.state.isOperating;
+      let display;
+      //if an operation is in progress, it is on the operations list, so we ignore it so the display is showing the correc thing still.
+      if (isOperating){
+        display = operations[operations.length - 2];
+      }
+      else{
+        display = operations[operations.length - 1];
+      }
       console.log(operations);
       return (
         <div className="calculator">
             <CalculatorDisplay 
-              value = {current} 
+              value = {display} 
             />
             <CalculatorButtons
-              onClick ={(type,action) => this.updateDisplay(type,action)}
+              numberButton ={(button) => this.numberButton(button)}
+              functionButton ={(button) => this.functionButton(button)}
              />
         </div>
       );
