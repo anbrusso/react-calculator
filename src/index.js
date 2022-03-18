@@ -7,11 +7,31 @@ import './index.css';
     }
 
     render() {
+      if(!this.props.errorText){
+        return (
+          <div className="calculator-display">
+            <input type="text" readOnly value = {this.props.value} maxLength="27"/>
+          </div>
+        );
+      }
+      else{
+        return (
+          <div className="calculator-display">
+            <input type="text" readOnly value = {this.props.errorText} maxLength="27"/>
+          </div>
+        );
+      }
+    }
+  }
+  class CalculatorHistory extends React.Component {
+    constructor(props){
+        super(props);
+    }
+
+    render() {
       return (
-        <div className="calculator-display">
-          <input type="text" readOnly value = {this.props.value} maxLength="27"/>
-        </div>
-      );
+       this.props.history.map((h,i) => <div key={i + "sadf"}>{h}</div>)
+      )
     }
   }
   class CalculatorButtons extends React.Component {
@@ -71,13 +91,16 @@ import './index.css';
           super(props);
           this.state = {
             operations : ["0"],
-            isOperating : false
+            isOperating : false,
+            errorText : "",
+            history: []
           }
       }
     //perform the button press for a number
     numberButton(button){
       const operations = this.state.operations.slice()
       const current = operations[operations.length - 1];
+      const errorText = this.state.errorText;
       let isOperating = this.state.isOperating;
       let newtext;
       let newoperations
@@ -105,9 +128,11 @@ import './index.css';
         }
       }
       newoperations.push(newtext);
+      
       this.setState({
         operations : newoperations,
-        isOperating : isOperating
+        isOperating : isOperating,
+        errorText : ""
       });
     }
     //given two string  numbers, performs the specified operation and returns the result.
@@ -160,8 +185,11 @@ import './index.css';
       const current = operations[operations.length - 1];
       let isOperating = this.state.isOperating;
       let newoperations = operations.slice();
+      let newErrorText =  this.state.errorText;
+      let newHistory =  this.state.history;
       switch(button){
         case "C":
+          newHistory = [];
           //clear button resets the history completely
           newoperations = ["0"];
           break;
@@ -208,6 +236,7 @@ import './index.css';
             number =  this.state.operations[operations.length - 1];
           }
           result = this.doUnaryOperation(number,button);
+          newHistory.push(number + " " + button);
           newoperations.push(button);
           newoperations.push(result+"");
           break;
@@ -231,10 +260,12 @@ import './index.css';
         //equals button behavior varies considerably based on what was recently pressed.
         //TODO: this behavior needs to be worked through more.
         case "=":
+          //if you hit equals while an operator was recently hit, do operation on same number.
           if(isOperating){
             let number = this.state.operations[operations.length - 2];
             let operation = this.state.operations[operations.length - 1];
             let result = this.doBinaryOperation(number,number,operation);
+            newHistory.push(number + " " + operation + " " + number + " = " + result);
             newoperations = this.state.operations.slice();
             newoperations.push(number);
             newoperations.push("=");
@@ -246,6 +277,17 @@ import './index.css';
             let operation = this.state.operations[operations.length - 2];
             let secondnumber = this.state.operations[operations.length - 1];
             let result = this.doBinaryOperation(firstnumber,secondnumber,operation);
+            if (result === Infinity){
+              newErrorText = "Division by zero is undefined";
+              newoperations = ["0"];
+              this.setState({
+                operations : newoperations,
+                isOperating : isOperating,
+                errorText : newErrorText
+              });
+              return;
+            }
+            newHistory.push(firstnumber + " " + operation + " " + secondnumber + " = " + result);
             newoperations = this.state.operations.slice();
             newoperations.push("=");
             newoperations.push(result+"");
@@ -254,12 +296,16 @@ import './index.css';
       }
       this.setState({
         operations : newoperations,
-        isOperating : isOperating
+        isOperating : isOperating,
+        errorText : newErrorText,
+        history: newHistory
       });
     }
     render() {
       const operations = this.state.operations;
+      const history = this.state.history;
       const isOperating = this.state.isOperating;
+      const errorText = this.state.errorText;
       let display;
       //if an operation is in progress, it is on the operations list, so we ignore it so the display is showing the correc thing still.
       if (isOperating){
@@ -270,14 +316,20 @@ import './index.css';
       }
       console.log(operations);
       return (
-        <div className="calculator">
-            <CalculatorDisplay 
-              value = {display} 
+        <div>
+            <div className="calculator">
+              <CalculatorDisplay 
+                value = {display}
+                errorText= {errorText}
+              />
+              <CalculatorButtons
+                numberButton ={(button) => this.numberButton(button)}
+                functionButton ={(button) => this.functionButton(button)}
+              />
+             </div>
+            <CalculatorHistory
+              history = {history}
             />
-            <CalculatorButtons
-              numberButton ={(button) => this.numberButton(button)}
-              functionButton ={(button) => this.functionButton(button)}
-             />
         </div>
       );
     }
